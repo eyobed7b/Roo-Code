@@ -37,6 +37,7 @@ import { generateImageTool } from "../tools/GenerateImageTool"
 import { applyDiffTool as applyDiffToolClass } from "../tools/ApplyDiffTool"
 import { isValidToolName, validateToolUse } from "../tools/validateToolUse"
 import { codebaseSearchTool } from "../tools/CodebaseSearchTool"
+import { selectActiveIntentTool } from "../tools/SelectActiveIntentTool"
 
 import { formatResponse } from "../prompts/responses"
 import { sanitizeToolUseId } from "../../utils/tool-id"
@@ -308,7 +309,7 @@ export async function presentAssistantMessage(cline: Task) {
 						typeof (cline as any).recordToolError === "function" &&
 						typeof (block as any).name === "string"
 					) {
-						;(cline as any).recordToolError((block as any).name as ToolName, errorMessage)
+						; (cline as any).recordToolError((block as any).name as ToolName, errorMessage)
 					}
 				} catch {
 					// Best-effort only
@@ -341,9 +342,8 @@ export async function presentAssistantMessage(cline: Task) {
 						// Native-only: tool args are structured (no XML payloads).
 						return block.params?.path ? `[${block.name} for '${block.params.path}']` : `[${block.name}]`
 					case "search_files":
-						return `[${block.name} for '${block.params.regex}'${
-							block.params.file_pattern ? ` in '${block.params.file_pattern}'` : ""
-						}]`
+						return `[${block.name} for '${block.params.regex}'${block.params.file_pattern ? ` in '${block.params.file_pattern}'` : ""
+							}]`
 					case "edit":
 					case "search_and_replace":
 						return `[${block.name} for '${block.params.file_path}']`
@@ -383,6 +383,8 @@ export async function presentAssistantMessage(cline: Task) {
 						return `[${block.name} for '${block.params.skill}'${block.params.args ? ` with args: ${block.params.args}` : ""}]`
 					case "generate_image":
 						return `[${block.name} for '${block.params.path}']`
+					case "select_active_intent":
+						return `[${block.name} for '${block.params.intent_id}']`
 					default:
 						return `[${block.name}]`
 				}
@@ -844,6 +846,13 @@ export async function presentAssistantMessage(cline: Task) {
 				case "generate_image":
 					await checkpointSaveAndMark(cline)
 					await generateImageTool.handle(cline, block as ToolUse<"generate_image">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+					})
+					break
+				case "select_active_intent":
+					await selectActiveIntentTool.handle(cline, block as ToolUse<"select_active_intent">, {
 						askApproval,
 						handleError,
 						pushToolResult,

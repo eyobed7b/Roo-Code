@@ -396,3 +396,31 @@ export async function getGitStatus(cwd: string, maxFiles: number = 20): Promise<
 		return null
 	}
 }
+
+/**
+ * Gets git metadata (branch and HEAD commit hash) for a given directory.
+ * @param cwd The working directory.
+ * @returns An object containing branch and hash, or undefined if not a git repo or on error.
+ */
+export async function getGitMetadata(cwd: string): Promise<{ branch: string; hash: string } | undefined> {
+	try {
+		const isInstalled = await checkGitInstalled()
+		if (!isInstalled) return undefined
+
+		const isRepo = await checkGitRepo(cwd)
+		if (!isRepo) return undefined
+
+		const [{ stdout: branch }, { stdout: hash }] = await Promise.all([
+			execAsync("git rev-parse --abbrev-ref HEAD", { cwd }),
+			execAsync("git rev-parse HEAD", { cwd }),
+		])
+
+		return {
+			branch: branch.trim(),
+			hash: hash.trim(),
+		}
+	} catch (error) {
+		console.error("Error getting git metadata:", error)
+		return undefined
+	}
+}

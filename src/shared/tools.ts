@@ -80,6 +80,9 @@ export const toolParamNames = [
 	// read_file legacy format parameter (backward compatibility)
 	"files",
 	"line_ranges",
+	"intent_id",
+	"mutation_class",
+	"expected_hash",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -114,7 +117,8 @@ export type NativeToolArgs = {
 	switch_mode: { mode_slug: string; reason: string }
 	update_todo_list: { todos: string }
 	use_mcp_tool: { server_name: string; tool_name: string; arguments?: Record<string, unknown> }
-	write_to_file: { path: string; content: string }
+	write_to_file: { path: string; content: string; intent_id?: string; mutation_class?: string; expected_hash?: string }
+	select_active_intent: { intent_id: string }
 	// Add more tools as they are migrated to native protocol
 }
 
@@ -194,7 +198,7 @@ export interface ReadFileToolUse extends ToolUse<"read_file"> {
 
 export interface WriteToFileToolUse extends ToolUse<"write_to_file"> {
 	name: "write_to_file"
-	params: Partial<Pick<Record<ToolParamName, string>, "path" | "content">>
+	params: Partial<Pick<Record<ToolParamName, string>, "path" | "content" | "intent_id" | "mutation_class" | "expected_hash">>
 }
 
 export interface CodebaseSearchToolUse extends ToolUse<"codebase_search"> {
@@ -257,6 +261,11 @@ export interface GenerateImageToolUse extends ToolUse<"generate_image"> {
 	params: Partial<Pick<Record<ToolParamName, string>, "prompt" | "path" | "image">>
 }
 
+export interface SelectActiveIntentToolUse extends ToolUse<"select_active_intent"> {
+	name: "select_active_intent"
+	params: Partial<Pick<Record<ToolParamName, string>, "intent_id">>
+}
+
 // Define tool group configuration
 export type ToolGroupConfig = {
 	tools: readonly string[]
@@ -289,6 +298,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	skill: "load skill",
 	generate_image: "generate images",
 	custom_tool: "use custom tools",
+	select_active_intent: "select active intent",
 } as const
 
 // Define available tool groups.
@@ -306,6 +316,10 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 	mcp: {
 		tools: ["use_mcp_tool", "access_mcp_resource"],
 	},
+	intent: {
+		tools: ["select_active_intent"],
+		alwaysAvailable: true,
+	},
 	modes: {
 		tools: ["switch_mode", "new_task"],
 		alwaysAvailable: true,
@@ -321,6 +335,7 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"update_todo_list",
 	"run_slash_command",
 	"skill",
+	"select_active_intent",
 ] as const
 
 /**
@@ -341,17 +356,17 @@ export const TOOL_ALIASES: Record<string, ToolName> = {
 export type DiffResult =
 	| { success: true; content: string; failParts?: DiffResult[] }
 	| ({
-			success: false
-			error?: string
-			details?: {
-				similarity?: number
-				threshold?: number
-				matchedRange?: { start: number; end: number }
-				searchContent?: string
-				bestMatch?: string
-			}
-			failParts?: DiffResult[]
-	  } & ({ error: string } | { failParts: DiffResult[] }))
+		success: false
+		error?: string
+		details?: {
+			similarity?: number
+			threshold?: number
+			matchedRange?: { start: number; end: number }
+			searchContent?: string
+			bestMatch?: string
+		}
+		failParts?: DiffResult[]
+	} & ({ error: string } | { failParts: DiffResult[] }))
 
 export interface DiffItem {
 	content: string

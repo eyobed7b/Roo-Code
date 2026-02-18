@@ -2,6 +2,7 @@ import type { ToolName } from "@roo-code/types"
 
 import { Task } from "../task/Task"
 import type { ToolUse, HandleError, PushToolResult, AskApproval, NativeToolArgs } from "../../shared/tools"
+import { HookEngine } from "../../hooks/HookEngine"
 
 /**
  * Callbacks passed to tool execution
@@ -156,7 +157,21 @@ export abstract class BaseTool<TName extends ToolName> {
 			return
 		}
 
+		// Hook Engine: Pre-execution
+		await HookEngine.getInstance().preToolExecution(this.name, params, task)
+
+		// valid args
+		let executionResult: any = null
+		const originalPushToolResult = callbacks.pushToolResult
+		callbacks.pushToolResult = (content) => {
+			executionResult = content
+			originalPushToolResult(content)
+		}
+
 		// Execute with typed parameters
 		await this.execute(params, task, callbacks)
+
+		// Hook Engine: Post-execution
+		await HookEngine.getInstance().postToolExecution(this.name, params, executionResult, task)
 	}
 }

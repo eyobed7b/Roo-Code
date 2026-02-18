@@ -1,0 +1,1 @@
+{"timestamp": "2026-02-18T14:46:00.000Z", "intent_id": "INT-001", "tool": "select_active_intent", "params": {"intent_id": "INT-001"}, "result_summary": "Selected active intent."}
